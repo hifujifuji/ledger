@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>記帳系統</title>
+<meta name="theme-color" content="#ECE9E4">
+<meta name="description" content="離線可用的記帳 PWA，支援薪資週期、分類統計、JSON/CSV 備份">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzdBOEM5MSIgZD0iTTQuODkyIDkuNjE0YzAtLjQwMi4zMjMtLjcyOC43MjItLjcyOEg5LjQ3Yy40IDAgLjcyMy4zMjYuNzIzLjcyOGEuNzI2LjcyNiAwIDAgMS0uNzIzLjcyOUg1LjYxNGEuNzI2LjcyNiAwIDAgMS0uNzIyLS43MjkiLz48cGF0aCBmaWxsPSIjN0E4QzkxIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0yMS4xODggMTAuMDA0cS0uMDk0LS4wMDUtLjItLjAwNGgtMi43NzNDMTUuOTQ0IDEwIDE0IDExLjczNiAxNCAxNHMxLjk0NCA0IDQuMjE1IDRoMi43NzNxLjEwNi4wMDEuMi0uMDA0Yy45MjMtLjA1NiAxLjczOS0uNzU3IDEuODA4LTEuNzM3Yy4wMDQtLjA2NC4wMDQtLjEzMy4wMDQtLjE5N3YtNC4xMjRjMC0uMDY0IDAtLjEzMy0uMDA0LS4xOTdjLS4wNjktLjk4LS44ODUtMS42OC0xLjgwOC0xLjczN20tMy4yMTcgNS4wNjNjLjU4NCAwIDEuMDU4LS40NzggMS4wNTgtMS4wNjdjMC0uNTktLjQ3NC0xLjA2Ny0xLjA1OC0xLjA2N3MtMS4wNi40NzgtMS4wNiAxLjA2N2MwIC41OS40NzUgMS4wNjcgMS4wNiAxLjA2NyIgY2xpcC1ydWxlPSJldmVub2RkIi8+PHBhdGggZmlsbD0iIzdBOEM5MSIgZD0iTTIxLjE0IDEwLjAwMmMwLTEuMTgxLS4wNDQtMi40NDgtLjc5OC0zLjM1NWE0IDQgMCAwIDAtLjIzMy0uMjU2Yy0uNzQ5LS43NDgtMS42OTgtMS4wOC0yLjg3LTEuMjM4QzE2LjA5OSA1IDE0LjY0NCA1IDEyLjgwNiA1aC0yLjExMkM4Ljg1NiA1IDcuNCA1IDYuMjYgNS4xNTNjLTEuMTcyLjE1OC0yLjEyMS40OS0yLjg3IDEuMjM4Yy0uNzQ4Ljc0OS0xLjA4IDEuNjk4LTEuMjM4IDIuODdDMiAxMC40MDEgMiAxMS44NTYgMiAxMy42OTR2LjExMmMwIDEuODM4IDAgMy4yOTQuMTUzIDQuNDMzYy4xNTggMS4xNzIuNDkgMi4xMjEgMS4yMzggMi44N2MuNzQ5Ljc0OCAxLjY5OCAxLjA4IDIuODcgMS4yMzhjMS4xNC4xNTMgMi41OTUuMTUzIDQuNDMzLjE1M2gyLjExMmMxLjgzOCAwIDMuMjk0IDAgNC40MzMtLjE1M2MxLjE3Mi0uMTU4IDIuMTIxLS40OSAyLjg3LTEuMjM4cS4zMDUtLjMwOC41MjYtLjY2Yy40NS0uNzIuNTA0LTEuNjAyLjUwNC0yLjQ1bC0uMTUuMDAxaC0yLjc3NEMxNS45NDQgMTggMTQgMTYuMjY0IDE0IDE0czEuOTQ0LTQgNC4yMTUtNGgyLjc3M3EuMDc5IDAgLjE1MS4wMDIiIG9wYWNpdHk9Ii41Ii8+PHBhdGggZmlsbD0iIzdBOEM5MSIgZD0iTTEwLjEwMSAyLjU3Mkw4IDMuOTkybC0xLjczMyAxLjE2QzcuNDA1IDUgOC44NTkgNSAxMC42OTQgNWgyLjExMmMxLjgzOCAwIDMuMjk0IDAgNC40MzMuMTUzcS4zNDQuMDQ1LjY2Mi4xMTRMMTYgNGwtMi4xMTMtMS40MjhhMy40MiAzLjQyIDAgMCAwLTMuNzg2IDAiLz48L3N2Zz4K">
+<style>
+/* ============================================================
+   記帳系統・樣式（自含，不依賴 CDN）
+   視覺語言：莫蘭迪色系——灰調暖底、低彩度分類色、細線與極淡陰影
+   刻意不使用外部 CSS／字型，讓 App 殼層可完整離線快取。
+   版面：≥1100px 為寬幅雙欄（左：分類支出，右：明細），以下為單欄。
+   ============================================================ */
+:root {
+  --bg:        #ECE9E4;
+  --surface:   #F8F7F4;
+  --surface-2: #F1EEE9;
+  --ink:       #3D3A36;
+  --ink-2:     #67625B;
+  --muted:     #A09A91;
+  --line:      #E7E3DD;
+  --line-2:    #D8D2C9;
+  --accent:    #7A8C91;
+  --accent-d:  #64767B;
+  --accent-bg: #E3E8E8;
+  --income:    #6B8C76;
+  --expense:   #A66E68;
+  --warn-bg:   #F3ECE0;
+  --warn-ln:   #E0D1B8;
+  --warn-tx:   #7A6142;
+  --radius:    14px;
+  --shadow:    0 1px 2px rgba(70,60,50,.04);
+  --shadow-2:  0 12px 36px rgba(70,60,50,.14), 0 2px 6px rgba(70,60,50,.06);
+
+  --c-food:   #C6A57A;
+  --c-trans:  #87A0B1;
+  --c-med:    #8FAD9B;
+  --c-subs:   #9C93B3;
+  --c-shop:   #C79A96;
+  --c-fun:    #B3879E;
+  --c-save:   #9AA57F;
+  --c-ins:    #7E8DA0;
+  --c-other:  #B2ACA3;
+  --c-income: #6B8C76;
+}
+
+* { box-sizing: border-box; }
+
+/* hidden 屬性優先於元件的 display 設定（橫幅、刪除鈕等靠它切換） */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC",
+               "PingFang TC", "Microsoft JhengHei", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.num { font-variant-numeric: tabular-nums; }
+
+main {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 36px 40px 96px;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px;
+  min-height: 60px;
+}
+.card-head.bordered { border-bottom: 1px solid var(--line); }
+.card-title { font-weight: 600; font-size: 15px; margin: 0; letter-spacing: .02em; }
+.card-note { font-size: 12px; color: var(--muted); }
+
+/* ---------- 標題列 ---------- */
+header.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 2px 22px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line-2);
+}
+h1 { font-size: 24px; font-weight: 600; margin: 0; letter-spacing: .04em; }
+.subtitle { font-size: 12px; color: var(--muted); margin: 6px 0 0; letter-spacing: .02em; }
+.head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- 表單元件 ---------- */
+.input, select.input, textarea.input {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  padding: 9px 14px;
+  width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(122,140,145,.18);
+}
+select.input { cursor: pointer; appearance: none; padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23A09A91' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.input-sm { padding: 6px 12px; font-size: 13px; border-radius: 9px; }
+#search { width: 220px; }
+.field { display: block; margin-bottom: 16px; }
+.field > span { display: block; font-size: 12px; color: var(--ink-2); font-weight: 500; margin-bottom: 7px; letter-spacing: .03em; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ---------- 分類選擇（展開按鈕） ---------- */
+.cat-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cat-pick.single { grid-template-columns: 1fr; }
+.cat-chip {
+  --chip: var(--c-other);
+  font: inherit; font-size: 13.5px; color: var(--ink-2);
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 8px; border-radius: 10px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line-2);
+  transition: background .12s, border-color .12s, color .12s;
+}
+.cat-chip:hover { background: var(--surface-2); color: var(--ink); }
+.cat-chip .dot { background: var(--chip); }
+.cat-chip[aria-pressed="true"] {
+  color: var(--ink); font-weight: 500;
+  border-color: var(--chip);
+  background: color-mix(in srgb, var(--chip) 20%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--chip);
+}
+.cat-chip:disabled { cursor: default; }
+.cat-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(122,140,145,.25); }
+
+/* ---------- 按鈕 ---------- */
+.btn {
+  font: inherit; font-size: 14px; font-weight: 500;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 16px; border-radius: 10px; border: 1px solid transparent;
+  cursor: pointer; white-space: nowrap;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { color: #fff; background: var(--accent); }
+.btn-primary:hover { background: var(--accent-d); }
+.btn-soft { color: var(--ink-2); background: var(--surface); border-color: var(--line-2); }
+.btn-soft:hover { background: var(--surface-2); color: var(--ink); }
+.btn-danger { color: #fff; background: var(--expense); }
+.btn-ghost { color: var(--muted); background: none; border: none; padding: 6px; border-radius: 8px; }
+.btn-ghost:hover { color: var(--accent-d); background: var(--accent-bg); }
+.btn-ghost.danger:hover { color: var(--expense); background: #F2E5E2; }
+.btn-icon { width: 38px; height: 38px; padding: 0; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn-ghost svg { width: 15px; height: 15px; }
+
+/* ---------- 下拉選單（無 JS 依賴） ---------- */
+.menu { position: relative; }
+.menu > summary { list-style: none; cursor: pointer; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu-pop {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 40;
+  min-width: 200px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line-2);
+  border-radius: 12px; box-shadow: var(--shadow-2);
+}
+.menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  font: inherit; font-size: 14px; text-align: left; color: var(--ink-2);
+  padding: 9px 12px; border: none; border-radius: 8px; background: none; cursor: pointer;
+}
+.menu-item:hover { background: var(--surface-2); color: var(--ink); }
+.menu-item svg { width: 15px; height: 15px; color: var(--muted); flex: none; }
+.menu-sep { height: 1px; background: var(--line); margin: 5px 8px; }
+
+/* ---------- 統計卡 ---------- */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat {
+  background: var(--surface); box-shadow: var(--shadow);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px 22px;
+}
+.stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.stat-icon { width: 18px; height: 18px; color: var(--muted); display: flex; }
+.stat-icon svg { width: 18px; height: 18px; }
+.stat-label { font-size: 12px; letter-spacing: .12em; color: var(--muted); margin: 0; }
+.stat-value { font-size: 24px; font-weight: 600; margin: 0; letter-spacing: -.01em; }
+.v-income { color: var(--income); }
+.v-exp    { color: var(--expense); }
+.stat-sub { font-size: 11px; color: var(--muted); margin: 6px 0 0; }
+.stat.s-income { border-top: 3px solid var(--income); }
+.stat.s-exp    { border-top: 3px solid var(--expense); }
+.stat.s-cash   { border-top: 3px solid var(--accent); }
+.stat.s-bal    { border-top: 3px solid var(--line-2); }
+
+/* ---------- 雙欄版面 ---------- */
+.layout { display: grid; grid-template-columns: 1fr; gap: 0 24px; align-items: start; }
+
+/* ---------- 分類統計 ---------- */
+.cat-row { padding: 13px 24px; border-top: 1px solid var(--line); }
+.cat-row:first-child { border-top: none; }
+.cat-line { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; gap: 12px; }
+.cat-name { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.cat-amt { font-size: 14px; font-weight: 500; }
+.cat-pct { font-size: 12px; color: var(--muted); margin-left: 8px; display: inline-block; min-width: 3.4em; text-align: right; }
+.bar { height: 5px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 999px; }
+.dot { width: 8px; height: 8px; border-radius: 999px; flex: none; display: inline-block; }
+
+/* ---------- 明細表 ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th {
+  font-size: 11px; font-weight: 500; letter-spacing: .12em;
+  color: var(--muted); text-align: left; padding: 12px 24px; white-space: nowrap;
+  background: var(--surface-2);
+}
+th.r, td.r { text-align: right; }
+td { padding: 12px 24px; border-top: 1px solid var(--line); vertical-align: middle; }
+tbody tr { transition: background .12s; }
+tbody tr:hover { background: var(--surface-2); }
+.td-date { color: var(--muted); white-space: nowrap; width: 1%; }
+.td-item { color: var(--ink-2); }
+.item-name { font-weight: 500; color: var(--ink); }
+.td-cat { white-space: nowrap; width: 1%; }
+.cat-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--ink-2); white-space: nowrap;
+}
+.cat-inline { display: none; }
+.td-amt { font-weight: 600; white-space: nowrap; width: 1%; }
+.td-ops { width: 1%; white-space: nowrap; padding-left: 4px; padding-right: 16px; }
+.ops { display: flex; gap: 2px; opacity: 0; transition: opacity .12s; }
+tbody tr:hover .ops, tbody tr:focus-within .ops { opacity: 1; }
+.pill {
+  font-size: 11px; color: var(--ink-2); padding: 4px 11px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.empty { padding: 48px 24px; text-align: center; color: var(--muted); font-size: 14px; }
+
+/* ---------- 安裝提示橫幅 ---------- */
+.banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 12px 20px; margin-bottom: 20px;
+  background: var(--warn-bg); border: 1px solid var(--warn-ln);
+  border-radius: 12px; color: var(--warn-tx); font-size: 13px;
+}
+.banner-text { display: flex; align-items: center; gap: 9px; }
+.banner svg { width: 17px; height: 17px; flex: none; }
+.banner .btn { font-size: 13px; padding: 7px 14px; }
+
+/* ---------- 對話框 ---------- */
+dialog {
+  border: none; padding: 0; background: none;
+  max-width: 480px; width: calc(100% - 32px);
+}
+dialog::backdrop { background: rgba(61,58,54,.32); backdrop-filter: blur(2px); }
+.sheet {
+  background: var(--surface); border-radius: 18px; padding: 26px;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(61,58,54,.22);
+}
+.sheet h2 { font-size: 17px; font-weight: 600; margin: 0 0 20px; letter-spacing: .02em; }
+.sheet-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.sheet-foot .left { margin-right: auto; }
+.hint { font-size: 12px; color: var(--muted); margin: 10px 0 0; line-height: 1.6; }
+.seg { display: flex; gap: 8px; }
+.seg label {
+  flex: 1; text-align: center; font-size: 14px; font-weight: 500; color: var(--ink-2);
+  padding: 9px; border-radius: 10px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid transparent; transition: all .12s;
+}
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg input:checked + label.exp { background: #F2E5E2; border-color: #D3ABA5; color: #8A5650; }
+.seg input:checked + label.inc { background: #E3ECE5; border-color: #A8C1AF; color: #4F6E5A; }
+.seg input:focus-visible + label { box-shadow: 0 0 0 3px rgba(122,140,145,.25); }
+
+/* ---------- Toast ---------- */
+#toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px);
+  z-index: 90; display: flex; flex-direction: column; gap: 8px; align-items: center;
+  opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s cubic-bezier(.2,0,.2,1);
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast {
+  background: rgba(61,58,54,.94); color: #F8F7F4; font-size: 13.5px;
+  padding: 11px 18px; border-radius: 999px; box-shadow: 0 8px 28px rgba(61,58,54,.25);
+}
+
+/* ---------- 寬幅（電腦） ---------- */
+@media (min-width: 1100px) {
+  .layout { grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); }
+  .side { position: sticky; top: 24px; }
+}
+
+/* ---------- 中寬（平板） ---------- */
+@media (max-width: 900px) {
+  main { padding: 28px 24px 90px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------- 手機 ---------- */
+@media (max-width: 640px) {
+  main { padding: 20px 14px 90px; }
+  header.topbar { padding-bottom: 16px; margin-bottom: 18px; }
+  .card-head { padding: 14px 18px; }
+  .stats { gap: 12px; }
+  .stat { padding: 15px 16px; }
+  .stat-value { font-size: 19px; }
+  th, td { padding-left: 16px; padding-right: 16px; }
+  th.hide-sm, td.hide-sm { display: none; }
+  .cat-inline { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .cat-row { padding: 12px 18px; }
+  .ops { opacity: 1; }
+  .td-ops { padding-right: 8px; }
+  .field-row { grid-template-columns: 1fr; }
+  .head-actions { width: 100%; }
+  .head-actions > select { flex: 1; min-width: 0; }
+  #search { width: 140px; }
+  .btn { padding: 10px 16px; }
+  dialog { width: calc(100% - 20px); }
+  .sheet { padding: 20px; border-radius: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+/* 列印：只留內容 */
+@media print {
+  body { background: #fff; }
+  .no-print, .banner, .ops, #toast { display: none !important; }
+  .card, .stat { box-shadow: none; border: 1px solid #ddd; }
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+}
+</style>
+</head>
+<body>
+
+<main>
+
+  <!-- 離線／安裝提示 -->
+  <div id="banner" class="banner no-print" hidden="">
+    <span class="banner-text">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+      <span id="bannerText"></span>
+    </span>
+    <button class="btn btn-primary" id="bannerAction" hidden="">安裝 App</button>
+  </div>
+
+  <!-- 標題列 -->
+  <header class="topbar">
+    <div>
+      <h1>記帳系統</h1>
+      <p class="subtitle">新台幣（NT$）・薪資週期每月 25 日起計・資料自動儲存在本機</p>
+    </div>
+    <div class="head-actions no-print">
+      <select id="monthSelect" class="input" style="width:auto"><option value="all">全部期間</option></select>
+      <button class="btn btn-primary" id="btnAdd">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+        新增
+      </button>
+      <details class="menu" id="mainMenu">
+        <summary class="btn btn-soft btn-icon" title="更多" role="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+        </summary>
+        <div class="menu-pop">
+          <button class="menu-item" id="miCash">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            校準期初現金
+          </button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="miExport">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+            匯出 JSON 備份
+          </button>
+          <button class="menu-item" id="miImport">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path></svg>
+            匯入 JSON（取代全部）
+          </button>
+          <button class="menu-item" id="miCsv">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M8 13h8M8 17h5"></path></svg>
+            匯出本期 CSV
+          </button>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <!-- 統計卡 -->
+  <section class="stats">
+    <div class="stat s-cash">
+      <div class="stat-top">
+        <p class="stat-label">現金</p>
+        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2m3 5v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8m18 6h-4a1 1 0 0 0 0 2h4"></path></svg></span>
+      </div>
+      <p class="stat-value num" id="sumCash">NT$ 0</p>
+      <p class="stat-sub" id="cashNote"></p>
+    </div>
+    <div class="stat s-income">
+      <div class="stat-top">
+        <p class="stat-label">收入</p>
+        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m0 0-6 6m6-6 6 6"></path></svg></span>
+      </div>
+      <p class="stat-value num v-income" id="sumIncome">NT$ 0</p>
+    </div>
+    <div class="stat s-exp">
+      <div class="stat-top">
+        <p class="stat-label">支出</p>
+        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m0 0-6-6m6 6 6-6"></path></svg></span>
+      </div>
+      <p class="stat-value num v-exp" id="sumExpense">NT$ 0</p>
+    </div>
+    <div class="stat s-bal">
+      <div class="stat-top">
+        <p class="stat-label">結餘</p>
+        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"></path></svg></span>
+      </div>
+      <p class="stat-value num" id="sumBalance">NT$ 0</p>
+    </div>
+  </section>
+
+  <div class="layout">
+
+  <!-- 分類統計 -->
+  <aside class="side">
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">分類支出</h2>
+      <span class="card-note">佔本期支出比例</span>
+    </div>
+    <div id="catBody"></div>
+    <div id="catEmpty" class="empty" style="padding:8px 24px 28px">本期尚無支出。</div>
+  </section>
+  </aside>
+
+  <!-- 明細 -->
+  <section class="card">
+    <div class="card-head bordered">
+      <h2 class="card-title">收支明細</h2>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="search" id="search" class="input input-sm no-print" placeholder="搜尋項目或分類" autocomplete="off" value="">
+        <span class="pill" id="recordCount">0 筆</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>項目</th>
+            <th class="hide-sm">分類</th>
+            <th class="r">金額</th>
+            <th class="no-print"></th>
+          </tr>
+        </thead>
+        <tbody id="recordBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="empty" hidden="">本期尚無記錄。按右上角「新增」開始記帳。</div>
+  </section>
+
+  </div>
+
+</main>
+
+<!-- 新增／編輯 -->
+<dialog id="recDlg">
+  <form class="sheet" id="recForm" method="dialog">
+    <h2 id="recTitle">新增記錄</h2>
+    <label class="field">
+      <span>類型</span>
+      <div class="seg">
+        <input type="radio" name="type" id="tExp" value="expense" checked=""><label for="tExp" class="exp">支出</label>
+        <input type="radio" name="type" id="tInc" value="income"><label for="tInc" class="inc">收入</label>
+      </div>
+    </label>
+    <div class="field-row">
+      <label class="field">
+        <span>日期</span>
+        <input type="date" id="fDate" class="input" required="" value="">
+      </label>
+      <label class="field">
+        <span>金額（NT$）</span>
+        <input type="number" id="fAmount" class="input num" min="1" step="1" inputmode="numeric" required="" value="">
+      </label>
+    </div>
+    <label class="field">
+      <span>項目</span>
+      <input type="text" id="fItem" class="input" maxlength="60" required="" autocomplete="off" list="itemSuggest" value="">
+      <datalist id="itemSuggest"></datalist>
+    </label>
+    <div class="field">
+      <span>分類</span>
+      <div class="cat-pick" id="catPicker" role="radiogroup" aria-label="分類"></div>
+      <input type="hidden" id="fCat" value="">
+    </div>
+    <p class="hint" id="recHint"></p>
+    <div class="sheet-foot">
+      <button type="button" class="btn btn-soft left" id="recDelete" hidden="">刪除</button>
+      <button type="button" class="btn btn-soft" id="recCancel">取消</button>
+      <button type="submit" class="btn btn-primary" id="recSubmit">新增</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 校準現金 -->
+<dialog id="cashDlg">
+  <form class="sheet" id="cashForm" method="dialog">
+    <h2>校準期初現金</h2>
+    <label class="field">
+      <span>目前實際現金（NT$）</span>
+      <input type="number" id="fCashNow" class="input num" step="1" inputmode="numeric" required="" value="">
+    </label>
+    <p class="hint">輸入帳戶目前的實際金額，系統會回推期初現金，讓「現金」卡與實際一致。<br>目前顯示：<span class="num" id="cashCurrent"></span>　期初現金：<span class="num" id="cashBaseNow"></span></p>
+    <div class="sheet-foot">
+      <button type="button" class="btn btn-soft" id="cashCancel">取消</button>
+      <button type="submit" class="btn btn-primary">校準</button>
+    </div>
+  </form>
+</dialog>
+
+<input type="file" id="fileInput" accept=".json,application/json" hidden="">
+<div id="toast" class="no-print"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
