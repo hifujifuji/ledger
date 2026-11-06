@@ -1,6 +1,6 @@
 /* 離線快取 App 殼層。記帳資料在 localStorage，不在這裡，所以升級快取
    版本（改 CACHE_NAME）不會動到使用者的記帳資料。 */
-const CACHE_NAME = "ledger-shell-v3";
+const CACHE_NAME = "ledger-shell-v4";
 const SHELL = [
   "./",
   "./index.html",

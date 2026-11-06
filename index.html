@@ -44,6 +44,7 @@
   --c-fun:    #B3879E;
   --c-save:   #9AA57F;
   --c-ins:    #7E8DA0;
+  --c-travel: #6F9C98;
   --c-other:  #B2ACA3;
   --c-income: #6B8C76;
 }
@@ -157,6 +158,27 @@ select.input { cursor: pointer; appearance: none; padding-right: 34px;
 }
 .cat-chip:disabled { cursor: default; }
 .cat-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(122,140,145,.25); }
+
+/* ---------- 常用項目標籤（出現超過三次的項目） ---------- */
+.quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.quick-tag {
+  font: inherit; font-size: 12.5px; color: var(--ink-2);
+  padding: 4px 11px; border-radius: 999px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line);
+  transition: background .12s, border-color .12s, color .12s;
+}
+.quick-tag:hover { background: var(--accent-bg); border-color: var(--line-2); color: var(--ink); }
+.quick-tag[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent); color: var(--ink); }
+.quick-tag:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(122,140,145,.25); }
+
+/* ---------- 分類篩選列：亮起＝顯示並計入統計，空心＝隱藏 ---------- */
+.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 24px; }
+.filter-bar .cat-chip { padding: 6px 12px; font-size: 13px; }
+.filter-bar .cat-chip[aria-pressed="false"] { color: var(--muted); }
+.filter-bar .cat-chip[aria-pressed="false"] .dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--chip); }
+.filter-acts { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.filter-acts .btn-ghost { font-size: 12.5px; padding: 6px 10px; }
+.filter-note { font-size: 12px; color: var(--warn-tx); }
 
 /* ---------- 按鈕 ---------- */
 .btn {
@@ -337,6 +359,7 @@ dialog::backdrop { background: rgba(61,58,54,.32); backdrop-filter: blur(2px); }
   th.hide-sm, td.hide-sm { display: none; }
   .cat-inline { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); margin-top: 2px; }
   .cat-row { padding: 12px 18px; }
+  .filter-acts { margin-left: 0; width: 100%; }
   .ops { opacity: 1; }
   .td-ops { padding-right: 8px; }
   .field-row { grid-template-columns: 1fr; }
@@ -355,7 +378,7 @@ dialog::backdrop { background: rgba(61,58,54,.32); backdrop-filter: blur(2px); }
 /* 列印：只留內容 */
 @media print {
   body { background: #fff; }
-  .no-print, .banner, .ops, #toast { display: none !important; }
+  .no-print, .banner, .ops, #toast, .filter-acts { display: none !important; }
   .card, .stat { box-shadow: none; border: 1px solid #ddd; }
   .layout { grid-template-columns: 1fr; }
   .side { position: static; }
@@ -447,6 +470,16 @@ dialog::backdrop { background: rgba(61,58,54,.32); backdrop-filter: blur(2px); }
     </div>
   </section>
 
+  <!-- 分類篩選 -->
+  <section class="filter-bar" aria-label="分類篩選">
+    <div id="catFilter" style="display:contents"></div>
+    <div class="filter-acts no-print">
+      <span class="filter-note" id="filterNote" hidden=""></span>
+      <button type="button" class="btn btn-ghost" id="filterAll">全部顯示</button>
+      <button type="button" class="btn btn-ghost" id="filterNone">全部隱藏</button>
+    </div>
+  </section>
+
   <div class="layout">
 
   <!-- 分類統計 -->
@@ -512,11 +545,12 @@ dialog::backdrop { background: rgba(61,58,54,.32); backdrop-filter: blur(2px); }
         <input type="number" id="fAmount" class="input num" min="1" step="1" inputmode="numeric" required="" value="">
       </label>
     </div>
-    <label class="field">
-      <span>項目</span>
+    <div class="field">
+      <span><label for="fItem">項目</label></span>
       <input type="text" id="fItem" class="input" maxlength="60" required="" autocomplete="off" list="itemSuggest" value="">
       <datalist id="itemSuggest"></datalist>
-    </label>
+      <div class="quick" id="quickItems" role="group" aria-label="常用項目" hidden=""></div>
+    </div>
     <div class="field">
       <span>分類</span>
       <div class="cat-pick" id="catPicker" role="radiogroup" aria-label="分類"></div>

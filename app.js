@@ -45,6 +45,7 @@ const CAT_COLOR = {
   "訂閱軟體": "var(--c-subs)",
   "購物":    "var(--c-shop)",
   "興趣娛樂": "var(--c-fun)",
+  "旅遊":    "var(--c-travel)",
   "儲蓄投資": "var(--c-save)",
   "保險":    "var(--c-ins)",
   "其他":    "var(--c-other)",
@@ -92,6 +93,41 @@ function cashOf(records, base) {
   return base + records.reduce((s, r) => s + (r.type === "income" ? r.amount : -r.amount), 0);
 }
 
+/* ---------- 分類篩選 ----------
+   隱藏的分類同時從明細與統計（收入、支出、結餘、分類比例、CSV）排除。
+   「現金」卡是帳戶實際餘額，刻意不受篩選影響。
+   ponytail: 篩選狀態只存在記憶體，重新整理即恢復全部顯示。 */
+const hiddenCats = new Set();
+const shown = r => !hiddenCats.has(r.cat);
+
+function renderFilter() {
+  const box = $("catFilter");
+  if (!box.children.length) {
+    for (const c of VALID_CATS) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "cat-chip";
+      b.dataset.cat = c;
+      b.style.setProperty("--chip", catColor(c));
+      b.innerHTML = '<span class="dot"></span>' + esc(c);
+      box.appendChild(b);
+    }
+  }
+  box.querySelectorAll(".cat-chip").forEach(b => b.setAttribute("aria-pressed", !hiddenCats.has(b.dataset.cat)));
+  const n = hiddenCats.size;
+  $("filterNote").hidden = !n;
+  $("filterNote").textContent = "已隱藏 " + n + " 類，統計不含";
+  $("filterAll").hidden = !n;
+  $("filterNone").hidden = n === VALID_CATS.length;
+}
+
+function setFilter(cats) {
+  hiddenCats.clear();
+  cats.forEach(c => hiddenCats.add(c));
+  renderFilter();
+  render();
+}
+
 /* ---------- 渲染 ---------- */
 /* 首次載入一律顯示當月期（今天所屬的薪資期）；之後重繪才沿用使用者選的期別。
    當月期即使還沒有記錄也列入選單，避免剛過 25 日時跳到上一期或全部期間。 */
@@ -115,7 +151,7 @@ function render() {
   const sel = $("monthSelect").value;
   const q   = $("search").value.trim().toLowerCase();
 
-  const inPeriod = state.records.filter(r => sel === "all" || monthOf(r) === sel);
+  const inPeriod = state.records.filter(r => (sel === "all" || monthOf(r) === sel) && shown(r));
   const rows = inPeriod
     .filter(r => !q || r.item.toLowerCase().includes(q) || r.cat.toLowerCase().includes(q))
     .sort((a, b) => b.date.localeCompare(a.date) || state.records.indexOf(b) - state.records.indexOf(a));
@@ -162,11 +198,13 @@ function render() {
   if (rows.length === 0) {
     emptyEl.innerHTML = "";
     if (!q) {
-      emptyEl.textContent = "本期尚無記錄。按右上角「新增」開始記帳。";
+      emptyEl.textContent = hiddenCats.size
+        ? "本期沒有顯示中分類的記錄。"
+        : "本期尚無記錄。按右上角「新增」開始記帳。";
     } else {
       /* 搜尋只看當期，但舊記錄常在別期——直接告訴使用者並給一鍵切換 */
-      const all = state.records.filter(r =>
-        r.item.toLowerCase().includes(q) || r.cat.toLowerCase().includes(q)).length;
+      const all = state.records.filter(r => shown(r) &&
+        (r.item.toLowerCase().includes(q) || r.cat.toLowerCase().includes(q))).length;
       emptyEl.appendChild(document.createTextNode("本期沒有符合「" + q + "」的記錄。"));
       if (all > 0 && sel !== "all") {
         emptyEl.appendChild(document.createElement("br"));
@@ -277,6 +315,41 @@ function pickCat(c) {
   });
 }
 
+/* 常用項目：同類型（支出／收入）中出現超過三次的項目，依次數排序。
+   點選後填入項目名稱，並帶入該項目最近一次用的分類。 */
+const QUICK_MIN = 4;
+
+function renderQuick() {
+  const type = document.querySelector('input[name="type"]:checked').value;
+  const seen = new Map();
+  for (const r of state.records) {
+    if (r.type !== type) continue;
+    const e = seen.get(r.item) || { n: 0 };
+    e.n++; e.cat = r.cat;              /* 陣列是輸入順序，最後一筆即最近用的分類 */
+    seen.set(r.item, e);
+  }
+  const tags = [...seen].filter(([, e]) => e.n >= QUICK_MIN)
+    .sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0], "zh-TW"));
+  const box = $("quickItems");
+  box.innerHTML = "";
+  box.hidden = !tags.length;
+  for (const [item, e] of tags) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "quick-tag";
+    b.dataset.item = item;
+    b.dataset.cat = e.cat;
+    b.textContent = item;
+    box.appendChild(b);
+  }
+  markQuick();
+}
+
+function markQuick() {
+  const v = $("fItem").value.trim();
+  $("quickItems").querySelectorAll(".quick-tag").forEach(b => b.setAttribute("aria-pressed", b.dataset.item === v));
+}
+
 function openRec(index) {
   editIndex = index === undefined ? -1 : index;
   const r = editIndex >= 0 ? state.records[editIndex] : null;
@@ -289,6 +362,7 @@ function openRec(index) {
   const type = r ? r.type : "expense";
   (type === "income" ? $("tInc") : $("tExp")).checked = true;
   fillCats(type, r ? r.cat : null);
+  renderQuick();
   $("recHint").textContent = "日期落在 25 日之前會歸到上一期。";
   $("recDlg").showModal();
   setTimeout(() => (r ? $("fAmount") : $("fItem")).focus(), 30);
@@ -378,7 +452,7 @@ function importJson(file) {
 function exportCsv() {
   const sel = $("monthSelect").value;
   const rows = state.records
-    .filter(r => sel === "all" || monthOf(r) === sel)
+    .filter(r => (sel === "all" || monthOf(r) === sel) && shown(r))
     .sort((a, b) => a.date.localeCompare(b.date));
   const q = s => '"' + String(s).replace(/"/g, '""') + '"';
   const csv = ["日期,項目,類型,金額,分類"]
@@ -495,7 +569,27 @@ $("catPicker").addEventListener("click", e => {
   if (b && !b.disabled) pickCat(b.dataset.cat);
 });
 document.querySelectorAll('input[name="type"]').forEach(el =>
-  el.addEventListener("change", () => fillCats(el.value, null)));
+  el.addEventListener("change", () => { fillCats(el.value, null); renderQuick(); }));
+$("fItem").addEventListener("input", markQuick);
+$("quickItems").addEventListener("click", e => {
+  const b = e.target.closest(".quick-tag");
+  if (!b) return;
+  $("fItem").value = b.dataset.item;
+  pickCat(b.dataset.cat);
+  markQuick();
+  $("fAmount").focus();
+});
+
+$("catFilter").addEventListener("click", e => {
+  const b = e.target.closest(".cat-chip");
+  if (!b) return;
+  const c = b.dataset.cat;
+  if (hiddenCats.has(c)) hiddenCats.delete(c); else hiddenCats.add(c);
+  renderFilter();
+  render();
+});
+$("filterAll").addEventListener("click", () => setFilter([]));
+$("filterNone").addEventListener("click", () => setFilter(VALID_CATS));
 
 $("cashForm").addEventListener("submit", e => {
   if (!submitCash()) e.preventDefault();
@@ -559,7 +653,7 @@ try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
    正常使用不需要理它。開 console 打 ledger.state.records 可看目前資料。 */
 window.ledger = {
   state, persist, periodOf, periodLabel, cashOf, fmt,
-  render, initMonths, fillCats, pickCat,
+  render, initMonths, fillCats, pickCat, renderQuick, setFilter, hiddenCats,
   openRec, submitRec, deleteRec, openCash, submitCash,
   exportJson, exportCsv, importJson,
   validateRecords,
@@ -570,5 +664,6 @@ try { validateRecords(state.records, state.cashBase); }
 catch (e) { console.warn("[記帳系統] 驗證程序本身出錯，已略過，不影響顯示：", e); }
 
 persist(); // 首次啟動先落地一份空白帳本，之後都是本機資料
+renderFilter();
 initMonths();
 render();
